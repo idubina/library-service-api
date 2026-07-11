@@ -36,6 +36,10 @@ class Borrowing(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="borrowings"
     )
 
+    @property
+    def is_active(self):
+        return self.actual_return_date is None
+
     class Meta:
         constraints = [
             models.CheckConstraint(
