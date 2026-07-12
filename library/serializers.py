@@ -49,3 +49,7 @@ class BorrowingSerializer(serializers.ModelSerializer):
 class BorrowingListSerializer(BorrowingSerializer):
     book = serializers.StringRelatedField(read_only=True)
     user = serializers.SlugRelatedField(read_only=True, slug_field="email")
+
+
+class BorrowingBookReturnSerializer(serializers.Serializer):
+    pass
