@@ -45,6 +45,13 @@ class BorrowingApiView(
                 users_ids = self._params_to_ints(users)
                 queryset = queryset.filter(user__id__in=users_ids)
 
+        is_active = self.request.query_params.get("is_active")
+        if is_active:
+            if is_active.lower() == "true":
+                queryset = queryset.filter(actual_return_date__isnull=True)
+            if is_active.lower() == "false":
+                queryset = queryset.filter(actual_return_date__isnull=False)
+
         if self.action == "list":
             queryset = queryset.select_related("user", "book")
         return queryset
