@@ -1,8 +1,9 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.utils.timezone import now
+from django.utils.timezone import now, make_aware
 
 from library.models import Book, Borrowing
 from library.serializers import (
@@ -20,6 +21,10 @@ BORROWING_URL = reverse("library:borrowing-list")
 
 def get_detail_url(borrowing_id: int):
     return reverse("library:borrowing-detail", args=[borrowing_id])
+
+
+def get_return_book_url(borrowing_id: int):
+    return reverse("library:borrowing-return-book", args=[borrowing_id])
 
 
 def sample_book(**params):
@@ -203,6 +208,13 @@ class AuthenticatedBorrowingApiTest(TestCase):
 
         self.assertEqual(book.inventory, book_inventory_before_borrowing - 1)
 
+    def test_borrowing_book_return_forbidden(self):
+
+        borrowing = sample_borrowing_1(self.user)
+        res = self.client.post(get_return_book_url(borrowing.id))
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
 
 class AdminBorrowingApiTest(TestCase):
     def setUp(self):
@@ -271,3 +283,34 @@ class AdminBorrowingApiTest(TestCase):
         res = self.client.put(get_detail_url(borrowing.id), payload)
 
         self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @patch("library.views.now")
+    def test_borrowing_book_return(self, mocked_now):
+        fixed_now = make_aware(datetime(2026, 7, 12, 15, 30))
+        mocked_now.return_value = fixed_now
+
+        borrowing = sample_borrowing_1()
+        borrowed_book_inventory = borrowing.book.inventory
+
+        res = self.client.post(get_return_book_url(borrowing.id))
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        borrowing.refresh_from_db()
+        returned_book_inventory = borrowing.book.inventory
+
+        self.assertEqual(
+            borrowing.actual_return_date,
+            fixed_now,
+        )
+        self.assertFalse(borrowing.is_active)
+        self.assertEqual(returned_book_inventory, borrowed_book_inventory + 1)
+
+    def test_borrowing_return_duplicate_not_allowed(self):
+
+        borrowing = sample_borrowing_1()
+        self.client.post(get_return_book_url(borrowing.id))
+        res = self.client.post(get_return_book_url(borrowing.id))
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual("This book is not currently borrowed.", res.data["detail"])
