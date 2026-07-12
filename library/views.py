@@ -1,4 +1,6 @@
 from rest_framework import viewsets, mixins
+from rest_framework.permissions import IsAuthenticated
+
 from library.serializers import (
     BookSerializer,
     BorrowingSerializer,
@@ -22,6 +24,7 @@ class BorrowingApiView(
 ):
     queryset = Borrowing.objects.all()
     serializer_class = BorrowingSerializer
+    permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self):
         if self.action == "list":
