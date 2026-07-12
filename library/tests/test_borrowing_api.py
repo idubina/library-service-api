@@ -62,6 +62,20 @@ def sample_borrowing_2(user=None, **params):
     return Borrowing.objects.create(**defaults)
 
 
+def sample_borrowing_3(user=None, **params):
+    if user is None:
+        user = get_user_model().objects.create_user(
+            email="testuser4@user.com", password="testuser1234"
+        )
+    defaults = {
+        "expected_return_date": now().date() + timedelta(days=1),
+        "book": sample_book(title="Test3"),
+        "user": user,
+    }
+    defaults.update(params)
+    return Borrowing.objects.create(**defaults)
+
+
 class UnauthenticatedBorrowingApiTest(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -93,6 +107,23 @@ class AuthenticatedBorrowingApiTest(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn(serializer_user_borrowing.data, res.data)
         self.assertNotIn(serializer_user_2_borrowing.data, res.data)
+
+    def test_borrowing_filter_by_active_borrowing(self):
+        user_borrowing_active_true = sample_borrowing_1(user=self.user)
+        user_borrowing_active_false = sample_borrowing_2(
+            user=self.user, actual_return_date=now() + timedelta(days=1)
+        )
+
+        res_active_true = self.client.get(BORROWING_URL, {"is_active": "true"})
+        res_active_false = self.client.get(BORROWING_URL, {"is_active": "false"})
+
+        serializer_active_true = BorrowingListSerializer(user_borrowing_active_true)
+        serializer_active_false = BorrowingListSerializer(user_borrowing_active_false)
+
+        self.assertIn(serializer_active_true.data, res_active_true.data)
+        self.assertNotIn(serializer_active_true.data, res_active_false.data)
+        self.assertIn(serializer_active_false.data, res_active_false.data)
+        self.assertNotIn(serializer_active_false.data, res_active_true.data)
 
     def test_retrieve_only_user_borrowing_detail(self):
         user_borrowing = sample_borrowing_1(user=self.user)
@@ -195,6 +226,30 @@ class AdminBorrowingApiTest(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(serializer.data, res.data)
+
+    def test_borrowing_filter_by_user_ids(self):
+
+        user_2 = get_user_model().objects.create_user(
+            email="testuser22@user.com", password="test-user1234"
+        )
+        user_3 = get_user_model().objects.create_user(
+            email="testuser33@user.com", password="test-user1234"
+        )
+
+        borrowing_admin = sample_borrowing_1(user=self.user)
+        borrowing_user_2 = sample_borrowing_2(user=user_2)
+        borrowing_user_3 = sample_borrowing_3(user=user_3)
+
+        res = self.client.get(
+            BORROWING_URL, {"users": f"{borrowing_user_2.id},{borrowing_user_3.id}"}
+        )
+        serialize_admin = BorrowingListSerializer(borrowing_admin)
+        serialize_user_2 = BorrowingListSerializer(borrowing_user_2)
+        serialize_user_3 = BorrowingListSerializer(borrowing_user_3)
+
+        self.assertIn(serialize_user_2.data, res.data)
+        self.assertIn(serialize_user_3.data, res.data)
+        self.assertNotIn(serialize_admin.data, res.data)
 
     def test_borrowing_delete_not_allowed(self):
 
