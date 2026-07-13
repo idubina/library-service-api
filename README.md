@@ -96,23 +96,6 @@ Redoc documentation is available at:
 http://localhost:8001/api/doc/redoc/
 ```
 
-## Environment Variables
-
-Create a `.env` file containing the required variables:
-
-```env
-SECRET_KEY=
-
-POSTGRES_DB=
-POSTGRES_USER=
-POSTGRES_PASSWORD=
-POSTGRES_HOST=db
-POSTGRES_PORT=5432
-
-STRIPE_SECRET_KEY=
-STRIPE_PUBLISHABLE_KEY=
-```
-
 ## Main Endpoints
 
 ### Users
