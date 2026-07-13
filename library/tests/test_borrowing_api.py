@@ -253,7 +253,8 @@ class AdminBorrowingApiTest(TestCase):
         borrowing_user_3 = sample_borrowing_3(user=user_3)
 
         res = self.client.get(
-            BORROWING_URL, {"users": f"{borrowing_user_2.id},{borrowing_user_3.id}"}
+            BORROWING_URL,
+            {"users": f"{user_2.id},{user_3.id}"},
         )
         serialize_admin = BorrowingListSerializer(borrowing_admin)
         serialize_user_2 = BorrowingListSerializer(borrowing_user_2)
