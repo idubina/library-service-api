@@ -1,6 +1,7 @@
 import stripe
 from django.db import transaction
 from django.utils.timezone import now
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
@@ -67,6 +68,24 @@ class BorrowingApiView(
         if self.action == "list":
             queryset = queryset.select_related("user", "book")
         return queryset
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="is_active",
+                description="Filter by borrowing status [ex. ?is_active=True]",
+                type=bool,
+            ),
+            OpenApiParameter(
+                name="users",
+                description="Filter by user ids (available only for staff) [ex. ?users=2,5]",
+                type={"type": "list", "items": {"type": "number"}},
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        """Get Borrowing List"""
+        return super().list(request, *args, **kwargs)
 
     @action(
         detail=True,
